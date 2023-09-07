@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import '../../data/api/api_manger.dart';
+import '../../data/model/MapsResponse.dart';
 
 class MapView extends StatefulWidget {
   static String routName = '';
@@ -10,45 +12,45 @@ class MapView extends StatefulWidget {
 }
 
 class _MapViewState extends State<MapView> {
+  List<Message> messages = [];
   late GoogleMapController mapController;
-  double originLatitude = 6.5212402, originLongitude = 3.3679965;
-  double destLatitude = 6.849660, destLongitude = 3.648190;
   Map<MarkerId, Marker> markers = {};
-  Map<PolylineId, Polyline> polylines = {};
-  List<LatLng> polylineCoordinates = [];
+  List<Polyline> polylines = [];
   PolylinePoints polylinePoints = PolylinePoints();
-  String googleAPiKey = "AIzaSyCYsYxe7GS6bTiQPM3uFe51m_sLfji4u8I";
+  String googleAPIKey = "AIzaSyCYsYxe7GS6bTiQPM3uFe51m_sLfji4u8I"; // Replace with your Google Maps API key
 
   @override
   void initState() {
     super.initState();
 
-    /// origin marker
-    _addMarker(LatLng(originLatitude, originLongitude), "origin",
-        BitmapDescriptor.defaultMarker);
+    init();
+    // Create markers for each message
 
-    /// destination marker
-    _addMarker(LatLng(destLatitude, destLongitude), "destination",
-        BitmapDescriptor.defaultMarkerWithHue(90));
-    _getPolyline();
   }
 
   @override
   Widget build(BuildContext context) {
+
+
     return SafeArea(
       child: Scaffold(
-          body: GoogleMap(
-            initialCameraPosition: CameraPosition(
-                target: LatLng(originLatitude, originLongitude), zoom: 15),
-            myLocationEnabled: true,
-            tiltGesturesEnabled: true,
-            compassEnabled: true,
-            scrollGesturesEnabled: true,
-            zoomGesturesEnabled: true,
-            onMapCreated: _onMapCreated,
-            markers: Set<Marker>.of(markers.values),
-            polylines: Set<Polyline>.of(polylines.values),
-          )),
+        body: GoogleMap(
+          initialCameraPosition: CameraPosition(
+            target: LatLng(
+              30.584280177095813,31.497689977352678
+            ),
+            zoom: 20,
+          ),
+          myLocationEnabled: true,
+          tiltGesturesEnabled: true,
+          compassEnabled: true,
+          scrollGesturesEnabled: true,
+          zoomGesturesEnabled: true,
+          onMapCreated: _onMapCreated,
+          markers: Set<Marker>.of(markers.values),
+          polylines: Set<Polyline>.of(polylines),
+        ),
+      ),
     );
   }
 
@@ -56,33 +58,70 @@ class _MapViewState extends State<MapView> {
     mapController = controller;
   }
 
-  _addMarker(LatLng position, String id, BitmapDescriptor descriptor) {
-    MarkerId markerId = MarkerId(id);
-    Marker marker =
-    Marker(markerId: markerId, icon: descriptor, position: position);
+  _addMarker(Message message) {
+    MarkerId markerId = MarkerId(message.accessPointId.toString());
+    Marker marker = Marker(
+      markerId: markerId,
+      icon: BitmapDescriptor.defaultMarker,
+      infoWindow: InfoWindow(title: message.name),
+      position: LatLng(message.latitude!, message.longitude!),
+    );
     markers[markerId] = marker;
   }
 
-  _addPolyLine() {
-    PolylineId id = const PolylineId("poly");
-    Polyline polyline = Polyline(
-        polylineId: id, color: Colors.red, points: polylineCoordinates);
-    polylines[id] = polyline;
-    setState(() {});
-  }
-
-  _getPolyline() async {
+  _getPolyline(Message origin, Message destination) async {
     PolylineResult result = await polylinePoints.getRouteBetweenCoordinates(
-        googleAPiKey,
-        PointLatLng(originLatitude, originLongitude),
-        PointLatLng(destLatitude, destLongitude),
-        travelMode: TravelMode.driving,
-        );
+      googleAPIKey,
+      PointLatLng(origin.latitude!, origin.longitude!),
+      PointLatLng(destination.latitude!, destination.longitude!),
+      travelMode: TravelMode.driving,
+    );
+
+    List<LatLng> polylineCoordinates = [];
+
     if (result.points.isNotEmpty) {
       for (var point in result.points) {
         polylineCoordinates.add(LatLng(point.latitude, point.longitude));
       }
+
+      Polyline polyline = Polyline(
+        polylineId: PolylineId('${origin.accessPointId}_${destination.accessPointId}'),
+        color: Colors.blue,
+        width: 7,
+        points: polylineCoordinates,
+      );
+
+      polylines.add(polyline);
     }
-    _addPolyLine();
+
+    setState(() {});
   }
+
+  @override
+  void dispose() {
+    mapController.dispose();
+    super.dispose();
+  }
+
+  void init() async {
+    final res = await ApiManger.getStation();
+    for (int i = 0; i < res.message!.length!; i++) {
+      messages.add(res.message![i]);
+    }
+
+    // Create markers for each message
+    for (int i = 0; i < messages.length; i++) {
+      _addMarker(messages[i]);
+    }
+
+    // Create polylines connecting messages
+    for (int i = 0; i < messages.length - 1; i++) {
+      _getPolyline(messages[i], messages[i + 1]);
+    }
+
+    // Ensure that markers and polylines are populated before calling setState
+    setState(() {});
+  }
+
+
 }

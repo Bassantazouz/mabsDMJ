@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mapsd/data/model/MapsResponse.dart';
 import 'package:mapsd/ui/maps/maps.dart';
 
 void main() {
@@ -6,17 +7,18 @@ void main() {
 }
 
 class MyApp extends StatelessWidget {
+
+
   const MyApp({super.key});
 
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
+
     return MaterialApp(
+
       title: 'Flutter Demo',
-      routes: {
-        MapView.routName: (_) => MapView()
-      },
-      initialRoute: MapView.routName,
+     home: MapView(),
     );
   }
 }
