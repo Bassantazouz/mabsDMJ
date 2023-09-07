@@ -14,9 +14,9 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Flutter Demo',
       routes: {
-        Maps.routName: (_) => Maps()
+        MapView.routName: (_) => MapView()
       },
-      initialRoute: Maps.routName,
+      initialRoute: MapView.routName,
     );
   }
 }
